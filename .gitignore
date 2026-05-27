@@ -1,0 +1,5 @@
+node_modules/
+.DS_Store
+*.log
+backend/node_modules/
+backend/config/db_store.json
