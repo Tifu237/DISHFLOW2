@@ -1,12 +1,23 @@
 // backend/routes/VendorRoutes.js
 const express = require('express');
 const router = express.Router();
-const db = require('../config/db'); // Points straight to your new MySQL bridge
-const FoodItem = require('../models/FoodItem');
-const Restaurant = require('../models/Restaurant');
+const db = require('../config/db'); // Points straight to your local JSON database bridge
 
 // ==========================================
-// 🚀 1. OWNER REGISTRATION ENDPOINT (MySQL)
+// 🚀 1. FETCH ALL VENDORS ENDPOINT (JSON)
+// ==========================================
+router.get('/all', async (req, res) => {
+    try {
+        const vendors = db.getVendors();
+        res.json(vendors);
+    } catch (error) {
+        console.error("Fetch Error:", error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ==========================================
+// 🚀 2. OWNER REGISTRATION ENDPOINT (JSON)
 // ==========================================
 router.post('/register-owner', async (req, res) => {
     const { email, password, restaurantName, country, city, location, currency } = req.body;
@@ -16,78 +27,79 @@ router.post('/register-owner', async (req, res) => {
     }
 
     try {
-        // Check if the shop name already exists in the database
-        const [existingUsers] = await db.query('SELECT * FROM vendors WHERE shop_name = ?', [restaurantName]);
-        if (existingUsers.length > 0) {
+        const vendors = db.getVendors();
+        
+        // Check if the shop name already exists
+        const existing = vendors.find(v => v.name.toLowerCase() === restaurantName.toLowerCase());
+        if (existing) {
             return res.status(400).json({ success: false, message: 'A shop with this name is already registered.' });
         }
 
-        // Insert the new shop into the 'vendors' table
-        const [result] = await db.query(
-            'INSERT INTO vendors (shop_name, town, currency) VALUES (?, ?, ?)',
-            [restaurantName, `${city}, ${location}`, currency || 'CFA']
-        );
+        const newId = vendors.length > 0 ? Math.max(...vendors.map(v => v.id)) + 1 : 1;
+        const newVendor = {
+            id: newId,
+            ownerId: `owner-${newId}`,
+            email: email,
+            password: password,
+            name: restaurantName,
+            shop_name: restaurantName,
+            town: `${city}, ${location}`,
+            city: city,
+            location: location,
+            country: country,
+            currency: currency || 'CFA',
+            menu: []
+        };
+
+        vendors.push(newVendor);
+        db.saveVendors(vendors);
 
         res.status(201).json({
             success: true,
             message: 'Owner and Shop successfully registered in the database!',
-            vendorId: result.insertId
+            vendorId: newId,
+            ownerId: `owner-${newId}`,
+            restaurant: newVendor
         });
 
     } catch (error) {
-        console.error("Database Error:", error.message);
-        res.status(500).json({ success: false, message: 'Database transaction failed.', error: error.message });
+        console.error("Registration Error:", error.message);
+        res.status(500).json({ success: false, message: 'Registration failed.', error: error.message });
     }
 });
 
 // ==========================================
-// 🚀 2. OWNER LOGIN ENDPOINT (MySQL)
+// 🚀 3. OWNER LOGIN ENDPOINT (JSON)
 // ==========================================
 router.post('/login-owner', async (req, res) => {
     const { email, password } = req.body;
 
     try {
-        // Query the database to find the vendor matching this shop name/email
-        const [vendors] = await db.query('SELECT * FROM vendors WHERE shop_name = ?', [email]);
+        const vendors = db.getVendors();
+        // Match on email or shop name
+        const vendor = vendors.find(v => 
+            (v.email && v.email.toLowerCase() === email.toLowerCase()) || 
+            v.name.toLowerCase() === email.toLowerCase()
+        );
 
-        if (vendors.length === 0) {
+        if (!vendor || vendor.password !== password) {
             return res.status(401).json({ success: false, message: 'Invalid owner credentials.' });
         }
 
-        const shop = vendors[0];
-
         res.json({ 
             success: true, 
-            ownerId: `owner-${shop.id}`, 
-            restaurant: {
-                id: shop.id,
-                shopName: shop.shop_name,
-                town: shop.town,
-                currency: shop.currency
-            } 
+            ownerId: vendor.ownerId, 
+            restaurant: vendor
         });
 
     } catch (error) {
         console.error("Login Error:", error.message);
-        res.status(500).json({ success: false, message: 'Database login transaction failed.' });
+        res.status(500).json({ success: false, message: 'Login failed.' });
     }
 });
 
 // ==========================================
-// 🚀 3. FETCH ALL VENDORS ENDPOINT (MySQL)
-// ==========================================
-router.get('/all', async (req, res) => {
-    try {
-        const [rows] = await db.query('SELECT * FROM vendors');
-        res.json(rows);
-    } catch (error) {
-        console.error("Fetch Error:", error.message);
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
-// ==========================================
-// 🚀 4. MANAGE DISHES ENDPOINT (MySQL)
+// 🚀 4. MANAGE DISHES ENDPOINT (JSON)
 // ==========================================
 router.post('/add-food-flexible', async (req, res) => {
     const { vendorId, name, basePrice, description, imageUrl, ingredients, isPermanent } = req.body;
@@ -97,17 +109,25 @@ router.post('/add-food-flexible', async (req, res) => {
     }
 
     try {
-        // Check if the restaurant exists
-        const [vendors] = await db.query('SELECT * FROM vendors WHERE id = ?', [vendorId]);
-        if (vendors.length === 0) {
+        const vendors = db.getVendors();
+        const vendor = vendors.find(v => Number(v.id) === Number(vendorId));
+        
+        if (!vendor) {
             return res.status(404).json({ success: false, message: 'Restaurant profile not found.' });
         }
 
-        // Insert the new dish linked to the vendor ID
-        await db.query(
-            'INSERT INTO dishes (vendor_id, name, base_price) VALUES (?, ?, ?)',
-            [vendorId, name, basePrice]
-        );
+        const newDish = {
+            id: Date.now(),
+            name: name,
+            basePrice: Number(basePrice),
+            description: description || '',
+            imageUrl: imageUrl || '',
+            isPermanent: isPermanent !== undefined ? !!isPermanent : true,
+            ingredients: ingredients || []
+        };
+
+        vendor.menu.push(newDish);
+        db.saveVendors(vendors);
 
         res.status(201).json({
             success: true,
@@ -115,6 +135,121 @@ router.post('/add-food-flexible', async (req, res) => {
         });
     } catch (error) {
         console.error("Add Food Error:", error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ==========================================
+// 🚀 5. WIPE DAILY SPECIALS ENDPOINT (JSON)
+// ==========================================
+router.post('/clear-daily-menu', async (req, res) => {
+    const { vendorId } = req.body;
+
+    if (!vendorId) {
+        return res.status(400).json({ success: false, message: 'Missing vendor details.' });
+    }
+
+    try {
+        const vendors = db.getVendors();
+        const vendor = vendors.find(v => Number(v.id) === Number(vendorId));
+
+        if (!vendor) {
+            return res.status(404).json({ success: false, message: 'Restaurant profile not found.' });
+        }
+
+        // Keep only permanent items
+        vendor.menu = vendor.menu.filter(item => item.isPermanent === true);
+        db.saveVendors(vendors);
+
+        res.json({
+            success: true,
+            message: 'Daily menu cleared. Only permanent items remain!'
+        });
+    } catch (error) {
+        console.error("Clear Menu Error:", error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ==========================================
+// 🚀 6. PLACE CUSTOMER ORDER ENDPOINT (JSON)
+// ==========================================
+router.post('/place-order', async (req, res) => {
+    const { vendorId, itemName, finalPrice, modifications, deliveryAddress } = req.body;
+
+    if (!vendorId || !itemName) {
+        return res.status(400).json({ success: false, message: 'Missing order details.' });
+    }
+
+    try {
+        const orders = db.getOrders();
+        const newOrderId = `order-${Date.now()}`;
+        
+        const newOrder = {
+            orderId: newOrderId,
+            vendorId: Number(vendorId),
+            itemName: itemName,
+            finalPrice: Number(finalPrice),
+            modifications: modifications || '',
+            deliveryAddress: deliveryAddress || '',
+            status: 'Placed'
+        };
+
+        orders.push(newOrder);
+        db.saveOrders(orders);
+
+        res.status(201).json({
+            success: true,
+            message: '🎉 Order placed safely! Keep track of status live on screen.',
+            order: newOrder
+        });
+    } catch (error) {
+        console.error("Place Order Error:", error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ==========================================
+// 🚀 7. LIVE ORDERS PIPELINE STREAM ENDPOINT
+// ==========================================
+router.get('/orders-stream', async (req, res) => {
+    try {
+        const orders = db.getOrders();
+        res.json(orders);
+    } catch (error) {
+        console.error("Orders Stream Error:", error.message);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ==========================================
+// 🚀 8. UPDATE ORDER STATUS ENDPOINT (JSON)
+// ==========================================
+router.post('/update-order-status', async (req, res) => {
+    const { orderId, newStatus } = req.body;
+
+    if (!orderId || !newStatus) {
+        return res.status(400).json({ success: false, message: 'Missing update details.' });
+    }
+
+    try {
+        const orders = db.getOrders();
+        const order = orders.find(o => o.orderId === orderId);
+
+        if (!order) {
+            return res.status(404).json({ success: false, message: 'Order not found.' });
+        }
+
+        order.status = newStatus;
+        db.saveOrders(orders);
+
+        res.json({
+            success: true,
+            message: 'Order status updated successfully!',
+            order: order
+        });
+    } catch (error) {
+        console.error("Update Order Error:", error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
