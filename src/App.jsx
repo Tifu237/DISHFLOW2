@@ -27,6 +27,7 @@ function App() {
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [ingredientModifiers, setIngredientModifiers] = useState({});
+  const [healthProfile, setHealthProfile] = useState('none');
   const [globalOrders, setGlobalOrders] = useState([]);
 
   const [searchCountry, setSearchCountry] = useState('');
@@ -154,6 +155,9 @@ function App() {
   const handlePlaceCustomerOrder = async () => {
     if (!selectedItem) return;
     const modificationsList = [];
+    if (healthProfile !== 'none') {
+      modificationsList.push(`Health Profile: ${healthProfile === 'hypertension' ? 'Hypertension (Low Sodium)' : healthProfile === 'ulcer' ? 'Ulcer (No Spicy)' : healthProfile === 'diabetes' ? 'Diabetes (Low Sugars)' : 'Shellfish Allergy'}`);
+    }
     Object.keys(ingredientModifiers).forEach(k => { modificationsList.push(`${k}: ${ingredientModifiers[k]}`); });
 
     const finalBill = selectedItem.basePrice - Object.keys(ingredientModifiers).reduce((acc, k) => {
@@ -174,6 +178,7 @@ function App() {
       alert(`🎉 Order placed safely! Keep track of status live on screen.`);
       setSelectedItem(null);
       setTypedAddress('');
+      setHealthProfile('none');
     }
   };
 
@@ -207,7 +212,7 @@ function App() {
 
       <main style={{ marginTop: '20px' }}>
         {userRole === 'guest' ? (
-          <CustomerView searchCountry={searchCountry} setSearchCountry={setSearchCountry} searchCity={searchCity} setSearchCity={setSearchCity} searchQuarter={searchQuarter} setSearchQuarter={setSearchQuarter} filteredShops={filteredShops} selectedVendor={selectedVendor} setSelectedVendor={setSelectedVendor} setSelectedItem={setSelectedItem} selectedItem={selectedItem} typedAddress={typedAddress} setTypedAddress={setTypedAddress} ingredientModifiers={ingredientModifiers} setIngredientModifiers={setIngredientModifiers} handlePlaceCustomerOrder={handlePlaceCustomerOrder} globalOrders={globalOrders} />
+          <CustomerView searchCountry={searchCountry} setSearchCountry={setSearchCountry} searchCity={searchCity} setSearchCity={setSearchCity} searchQuarter={searchQuarter} setSearchQuarter={setSearchQuarter} filteredShops={filteredShops} selectedVendor={selectedVendor} setSelectedVendor={setSelectedVendor} setSelectedItem={setSelectedItem} selectedItem={selectedItem} typedAddress={typedAddress} setTypedAddress={setTypedAddress} ingredientModifiers={ingredientModifiers} setIngredientModifiers={setIngredientModifiers} handlePlaceCustomerOrder={handlePlaceCustomerOrder} globalOrders={globalOrders} healthProfile={healthProfile} setHealthProfile={setHealthProfile} />
         ) : (
           myRestaurant && <OwnerView handleAddCustomDish={handleAddCustomDish} dishName={dishName} setDishName={setDishName} dishPrice={dishPrice} setDishPrice={setDishPrice} dishImage={dishImage} setDishImage={setDishImage} dishDescription={dishDescription} setDishDescription={setDishDescription} dishTypeOption={dishTypeOption} setDishTypeOption={setDishTypeOption} handleWipeDailyMenu={handleWipeDailyMenu} myRestaurant={myRestaurant} globalOrders={globalOrders} handleUpdateOrderStatus={handleUpdateOrderStatus} />
         )}

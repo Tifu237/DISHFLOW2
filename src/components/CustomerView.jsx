@@ -4,7 +4,7 @@ export default function CustomerView({
   searchCountry, setSearchCountry, searchCity, setSearchCity, searchQuarter, setSearchQuarter,
   filteredShops, selectedVendor, setSelectedVendor, setSelectedItem, selectedItem,
   typedAddress, setTypedAddress, ingredientModifiers, setIngredientModifiers,
-  handlePlaceCustomerOrder, globalOrders
+  handlePlaceCustomerOrder, globalOrders, healthProfile, setHealthProfile
 }) {
   return (
     <div>
@@ -56,6 +56,64 @@ export default function CustomerView({
                 <h4>Modify Recipe: {selectedItem.name}</h4>
                 <input type="text" placeholder="Enter precise drop-off delivery address" value={typedAddress} onChange={(e) => setTypedAddress(e.target.value)} style={{ width: '95%', padding: '8px', marginBottom: '15px' }} />
                 
+                <div style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '12px', borderRadius: '6px', marginBottom: '15px' }}>
+                  <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '6px', color: '#334155' }}>🩺 AUTO-ADJUST HEALTH PROFILE PRESETS:</label>
+                  <select 
+                    value={healthProfile} 
+                    onChange={(e) => {
+                      const pId = e.target.value;
+                      setHealthProfile(pId);
+                      
+                      // Auto-adjust ingredients map
+                      const initialMap = {};
+                      selectedItem.ingredients.forEach(ing => {
+                        initialMap[ing.name] = 'Normal';
+                      });
+
+                      if (pId === 'hypertension') {
+                        selectedItem.ingredients.forEach(ing => {
+                          if (ing.name.toLowerCase().includes('salt') || ing.name.toLowerCase().includes('sodium')) {
+                            initialMap[ing.name] = 'Low';
+                          }
+                        });
+                      } else if (pId === 'ulcer') {
+                        selectedItem.ingredients.forEach(ing => {
+                          if (ing.name.toLowerCase().includes('pepper') || ing.name.toLowerCase().includes('chili') || ing.name.toLowerCase().includes('spicy')) {
+                            initialMap[ing.name] = 'None';
+                          }
+                        });
+                      } else if (pId === 'diabetes') {
+                        selectedItem.ingredients.forEach(ing => {
+                          if (ing.name.toLowerCase().includes('sugar') || ing.name.toLowerCase().includes('plantain')) {
+                            initialMap[ing.name] = 'Low';
+                          }
+                        });
+                      } else if (pId === 'shellfish') {
+                        selectedItem.ingredients.forEach(ing => {
+                          if (ing.name.toLowerCase().includes('prawn') || ing.name.toLowerCase().includes('shrimp') || ing.name.toLowerCase().includes('shellfish')) {
+                            initialMap[ing.name] = 'None';
+                          }
+                        });
+                      }
+
+                      setIngredientModifiers(initialMap);
+                    }}
+                    style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #94a3b8', fontSize: '13px', backgroundColor: 'white', cursor: 'pointer' }}
+                  >
+                    <option value="none">Standard Diet / No Medical Alert</option>
+                    <option value="hypertension">Hypertension (Auto-sets Salts to Low)</option>
+                    <option value="ulcer">Gastric Ulcer (Auto-removes Hot Peppers)</option>
+                    <option value="diabetes">Diabetes (Auto-reduces Sugars & Plantains)</option>
+                    <option value="shellfish">Shellfish Allergy (Auto-removes Shellfish/Prawns)</option>
+                  </select>
+                </div>
+
+                {healthProfile !== 'none' && (
+                  <div style={{ padding: '10px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '4px', marginBottom: '15px', fontSize: '12px', color: '#065f46', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    🛡️ <strong>Health Guard:</strong> Recipe optimized automatically for {healthProfile === 'hypertension' ? 'Hypertension (Low Sodium)' : healthProfile === 'ulcer' ? 'Gastric Ulcer (Gastric-safe)' : healthProfile === 'diabetes' ? 'Diabetes (Low Glycemic/Carb)' : 'Shellfish Allergy (Allergen-free)'}!
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {selectedItem.ingredients.map(ing => {
                     const status = ingredientModifiers[ing.name] || 'Normal';
