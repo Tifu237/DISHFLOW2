@@ -81,10 +81,18 @@ function App() {
   // 🚀 SEAMLESS ONBOARDING PIPELINE: NO POPUPS, IMMEDIATE DASHBOARD ROUTING
   const handleOwnerRegister = async (e) => {
     e.preventDefault();
-    const response = await fetch('http://localhost:3000/api/vendors/register-owner', {
+    const response = await fetch('http://localhost:3000/api/vendors/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: regEmail, password: regPassword, restaurantName: regShopName, country: regCountry, city: regTown, location: regQuarter, currency: regCurrency })
+      body: JSON.stringify({ 
+        email: regEmail, 
+        password: regPassword, 
+        shopName: regShopName, 
+        currency: regCurrency,
+        country: regCountry,
+        town: regTown,
+        quarter: regQuarter
+      }),
     });
     const data = await response.json();
     if (data.success) {
