@@ -1,4 +1,39 @@
-import React from 'react';
+import React, { useState } from 'react';
+
+const HEALTH_MATRIX = {
+  diabetes: {
+    label: 'Diabetes',
+    avoid: ['sugar', 'sugary', 'sweet', 'honey', 'syrup', 'plantain', 'rice', 'cake', 'fried'],
+  },
+  hypertension: {
+    label: 'Hypertension',
+    avoid: ['salt', 'salty', 'sodium', 'smoked', 'pickled', 'bacon', 'sausage'],
+  },
+  ulcer: {
+    label: 'Gastric Ulcer',
+    avoid: ['pepper', 'chili', 'spicy', 'hot sauce', 'citrus', 'lemon', 'vinegar', 'coffee'],
+  },
+  shellfish: {
+    label: 'Shellfish Allergy',
+    avoid: ['shrimp', 'prawn', 'lobster', 'crab', 'shellfish', 'oyster', 'clam', 'scallop'],
+  },
+  gluten: {
+    label: 'Gluten Intolerance',
+    avoid: ['wheat', 'flour', 'bread', 'pasta', 'noodle', 'barley', 'gluten'],
+  },
+};
+
+function getHealthWarning(item, selectedCondition) {
+  if (!selectedCondition || selectedCondition === 'none') return null;
+  const matrix = HEALTH_MATRIX[selectedCondition];
+  if (!matrix) return null;
+  const text = `${item.name} ${item.description || ''}`.toLowerCase();
+  const matched = matrix.avoid.filter(keyword => text.includes(keyword));
+  if (matched.length > 0) {
+    return `⚠️ Not Recommended for ${matrix.label} (contains: ${matched.join(', ')})`;
+  }
+  return null;
+}
 
 export default function CustomerView({
   searchCountry, setSearchCountry, searchCity, setSearchCity, searchQuarter, setSearchQuarter,
@@ -6,13 +41,44 @@ export default function CustomerView({
   typedAddress, setTypedAddress, ingredientModifiers, setIngredientModifiers,
   handlePlaceCustomerOrder, globalOrders, healthProfile, setHealthProfile
 }) {
+  const [marketplaceFilter, setMarketplaceFilter] = useState('none');
+  const [hideWarned, setHideWarned] = useState(false);
+
   return (
     <div>
       <div style={{ display: 'flex', gap: '15px', backgroundColor: '#cbd5e1', padding: '12px 20px', borderRadius: '6px', marginBottom: '20px', textAlign: 'left', alignItems: 'center' }}>
-        <span style={{ fontWeight: 'bold', fontSize: '12px', color: '#0f172a' }}>📍 TARGET REGION ROUTER:</span>
+        <span style={{ fontWeight: 'bold', fontSize: '12px', color: '#0f172a' }}>📌 TARGET REGION ROUTER:</span>
         <input type="text" placeholder="Filter Country" value={searchCountry} onChange={(e) => setSearchCountry(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #94a3b8' }} />
         <input type="text" placeholder="Filter City" value={searchCity} onChange={(e) => setSearchCity(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #94a3b8' }} />
         <input type="text" placeholder="Filter Quarter" value={searchQuarter} onChange={(e) => setSearchQuarter(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #94a3b8' }} />
+      </div>
+
+      {/* 🩺 HEALTH FILTER BAR */}
+      <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #a7f3d0', borderRadius: '8px', padding: '12px 20px', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+        <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#065f46' }}>🩺 HEALTH FILTER:</span>
+        <select
+          value={marketplaceFilter}
+          onChange={(e) => setMarketplaceFilter(e.target.value)}
+          style={{ padding: '7px 12px', borderRadius: '6px', border: '1px solid #6ee7b7', fontSize: '13px', backgroundColor: 'white', color: '#065f46', fontWeight: 'bold', cursor: 'pointer' }}
+        >
+          <option value="none">No Health Filter</option>
+          {Object.entries(HEALTH_MATRIX).map(([key, val]) => (
+            <option key={key} value={key}>{val.label}</option>
+          ))}
+        </select>
+
+        {marketplaceFilter !== 'none' && (
+          <label style={{ fontSize: '12px', color: '#065f46', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+            <input type="checkbox" checked={hideWarned} onChange={(e) => setHideWarned(e.target.checked)} />
+            Hide flagged dishes
+          </label>
+        )}
+
+        {marketplaceFilter !== 'none' && (
+          <span style={{ fontSize: '12px', backgroundColor: '#dcfce7', color: '#14532d', padding: '4px 10px', borderRadius: '12px', fontWeight: 'bold' }}>
+            Filtering for: {HEALTH_MATRIX[marketplaceFilter]?.label}
+          </span>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.6fr', gap: '20px' }}>
@@ -34,16 +100,25 @@ export default function CustomerView({
             <div style={{ textAlign: 'left' }}>
               <button onClick={() => { setSelectedVendor(null); setSelectedItem(null); }} style={{ color: '#0f766e', background: 'none', border: 'none', fontWeight: 'bold', cursor: 'pointer', marginBottom: '10px' }}>← Back to Restaurant Hubs</button>
               <h3>{selectedVendor.name} Catalog</h3>
-              {selectedVendor.menu.map(item => (
-                <div key={item.id} onClick={() => setSelectedItem(item)} style={{ padding: '15px', border: selectedItem?.id === item.id ? '2px solid #0f766e' : '1px solid #e2e8f0', borderRadius: '6px', marginBottom: '10px', cursor: 'pointer', backgroundColor: selectedItem?.id === item.id ? '#f0fdf4' : 'white' }}>
-                  {item.imageUrl && <img src={item.imageUrl} alt={item.name} style={{ width: '100%', maxHeight: '110px', objectFit: 'cover', borderRadius: '4px', marginBottom: '8px' }} />}
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <h4 style={{ margin: '0' }}>{item.name} <small style={{ color: '#0284c7' }}>({item.isPermanent ? 'Permanent' : 'Daily Special'})</small></h4>
-                    <strong>{item.basePrice} {selectedVendor.currency || 'CFA'}</strong>
+              {selectedVendor.menu.map(item => {
+                const warning = getHealthWarning(item, marketplaceFilter);
+                if (hideWarned && warning) return null;
+                return (
+                  <div key={item.id} onClick={() => setSelectedItem(item)} style={{ padding: '15px', border: selectedItem?.id === item.id ? '2px solid #0f766e' : warning ? '2px solid #dc2626' : '1px solid #e2e8f0', borderRadius: '6px', marginBottom: '10px', cursor: 'pointer', backgroundColor: selectedItem?.id === item.id ? '#f0fdf4' : warning ? '#fff5f5' : 'white' }}>
+                    {item.imageUrl && <img src={item.imageUrl} alt={item.name} style={{ width: '100%', maxHeight: '110px', objectFit: 'cover', borderRadius: '4px', marginBottom: '8px' }} />}
+                    {warning && (
+                      <div style={{ backgroundColor: '#dc2626', color: 'white', padding: '5px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold', marginBottom: '8px' }}>
+                        {warning}
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <h4 style={{ margin: '0' }}>{item.name} <small style={{ color: '#0284c7' }}>({item.isPermanent ? 'Permanent' : 'Daily Special'})</small></h4>
+                      <strong>{item.basePrice} {selectedVendor.currency || 'CFA'}</strong>
+                    </div>
+                    <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#64748b' }}>{item.description}</p>
                   </div>
-                  <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#64748b' }}>{item.description}</p>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -55,51 +130,24 @@ export default function CustomerView({
               <div>
                 <h4>Modify Recipe: {selectedItem.name}</h4>
                 <input type="text" placeholder="Enter precise drop-off delivery address" value={typedAddress} onChange={(e) => setTypedAddress(e.target.value)} style={{ width: '95%', padding: '8px', marginBottom: '15px' }} />
-                
                 <div style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '12px', borderRadius: '6px', marginBottom: '15px' }}>
                   <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '6px', color: '#334155' }}>🩺 AUTO-ADJUST HEALTH PROFILE PRESETS:</label>
-                  <select 
-                    value={healthProfile} 
-                    onChange={(e) => {
-                      const pId = e.target.value;
-                      setHealthProfile(pId);
-                      
-                      // Auto-adjust ingredients map
-                      const initialMap = {};
-                      selectedItem.ingredients.forEach(ing => {
-                        initialMap[ing.name] = 'Normal';
-                      });
-
-                      if (pId === 'hypertension') {
-                        selectedItem.ingredients.forEach(ing => {
-                          if (ing.name.toLowerCase().includes('salt') || ing.name.toLowerCase().includes('sodium')) {
-                            initialMap[ing.name] = 'Low';
-                          }
-                        });
-                      } else if (pId === 'ulcer') {
-                        selectedItem.ingredients.forEach(ing => {
-                          if (ing.name.toLowerCase().includes('pepper') || ing.name.toLowerCase().includes('chili') || ing.name.toLowerCase().includes('spicy')) {
-                            initialMap[ing.name] = 'None';
-                          }
-                        });
-                      } else if (pId === 'diabetes') {
-                        selectedItem.ingredients.forEach(ing => {
-                          if (ing.name.toLowerCase().includes('sugar') || ing.name.toLowerCase().includes('plantain')) {
-                            initialMap[ing.name] = 'Low';
-                          }
-                        });
-                      } else if (pId === 'shellfish') {
-                        selectedItem.ingredients.forEach(ing => {
-                          if (ing.name.toLowerCase().includes('prawn') || ing.name.toLowerCase().includes('shrimp') || ing.name.toLowerCase().includes('shellfish')) {
-                            initialMap[ing.name] = 'None';
-                          }
-                        });
-                      }
-
-                      setIngredientModifiers(initialMap);
-                    }}
-                    style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #94a3b8', fontSize: '13px', backgroundColor: 'white', cursor: 'pointer' }}
-                  >
+                  <select value={healthProfile} onChange={(e) => {
+                    const pId = e.target.value;
+                    setHealthProfile(pId);
+                    const initialMap = {};
+                    selectedItem.ingredients.forEach(ing => { initialMap[ing.name] = 'Normal'; });
+                    if (pId === 'hypertension') {
+                      selectedItem.ingredients.forEach(ing => { if (ing.name.toLowerCase().includes('salt') || ing.name.toLowerCase().includes('sodium')) initialMap[ing.name] = 'Low'; });
+                    } else if (pId === 'ulcer') {
+                      selectedItem.ingredients.forEach(ing => { if (ing.name.toLowerCase().includes('pepper') || ing.name.toLowerCase().includes('chili') || ing.name.toLowerCase().includes('spicy')) initialMap[ing.name] = 'None'; });
+                    } else if (pId === 'diabetes') {
+                      selectedItem.ingredients.forEach(ing => { if (ing.name.toLowerCase().includes('sugar') || ing.name.toLowerCase().includes('plantain')) initialMap[ing.name] = 'Low'; });
+                    } else if (pId === 'shellfish') {
+                      selectedItem.ingredients.forEach(ing => { if (ing.name.toLowerCase().includes('prawn') || ing.name.toLowerCase().includes('shrimp') || ing.name.toLowerCase().includes('shellfish')) initialMap[ing.name] = 'None'; });
+                    }
+                    setIngredientModifiers(initialMap);
+                  }} style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #94a3b8', fontSize: '13px', backgroundColor: 'white', cursor: 'pointer' }}>
                     <option value="none">Standard Diet / No Medical Alert</option>
                     <option value="hypertension">Hypertension (Auto-sets Salts to Low)</option>
                     <option value="ulcer">Gastric Ulcer (Auto-removes Hot Peppers)</option>
@@ -107,13 +155,11 @@ export default function CustomerView({
                     <option value="shellfish">Shellfish Allergy (Auto-removes Shellfish/Prawns)</option>
                   </select>
                 </div>
-
                 {healthProfile !== 'none' && (
                   <div style={{ padding: '10px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '4px', marginBottom: '15px', fontSize: '12px', color: '#065f46', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    🛡️ <strong>Health Guard:</strong> Recipe optimized automatically for {healthProfile === 'hypertension' ? 'Hypertension (Low Sodium)' : healthProfile === 'ulcer' ? 'Gastric Ulcer (Gastric-safe)' : healthProfile === 'diabetes' ? 'Diabetes (Low Glycemic/Carb)' : 'Shellfish Allergy (Allergen-free)'}!
+                    🛡️ <strong>Health Guard:</strong> Recipe optimized for {healthProfile === 'hypertension' ? 'Hypertension (Low Sodium)' : healthProfile === 'ulcer' ? 'Gastric Ulcer (Gastric-safe)' : healthProfile === 'diabetes' ? 'Diabetes (Low Glycemic/Carb)' : 'Shellfish Allergy (Allergen-free)'}!
                   </div>
                 )}
-
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {selectedItem.ingredients.map(ing => {
                     const status = ingredientModifiers[ing.name] || 'Normal';

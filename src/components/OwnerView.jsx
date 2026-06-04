@@ -1,10 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export default function OwnerView({
   handleAddCustomDish, dishName, setDishName, dishPrice, setDishPrice, dishImage, setDishImage,
   dishDescription, setDishDescription, dishTypeOption, setDishTypeOption, handleWipeDailyMenu,
   myRestaurant, globalOrders, handleUpdateOrderStatus
 }) {
+  const [imagePreview, setImagePreview] = useState(null);
+
+  const handleImageFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const localUrl = URL.createObjectURL(file);
+      setImagePreview(localUrl);
+      setDishImage(localUrl);
+    }
+  };
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.6fr', gap: '20px', textAlign: 'left' }}>
       <div>
@@ -13,13 +24,43 @@ export default function OwnerView({
           <form onSubmit={handleAddCustomDish} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <input type="text" placeholder="Dish Name" value={dishName} onChange={(e) => setDishName(e.target.value)} required style={{ padding: '8px' }} />
             
-            {/* 🚀 FIXED PRICE MODULE DISPLAYING DROPDOWN CURRENCY INSTEAD OF EMPTY SPACE */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 0.5fr', gap: '10px' }}>
               <input type="number" placeholder="Base Price" value={dishPrice} onChange={(e) => setDishPrice(e.target.value)} required style={{ padding: '8px' }} />
               <input type="text" value={myRestaurant.currency || 'CFA'} disabled style={{ padding: '8px', textAlign: 'center', backgroundColor: '#e2e8f0', fontWeight: 'bold', border: '1px solid #cbd5e1', borderRadius: '4px' }} />
             </div>
 
-            <input type="text" placeholder="Image Link Path" value={dishImage} onChange={(e) => setDishImage(e.target.value)} style={{ padding: '8px' }} />
+            {/* 📸 IMAGE UPLOAD WITH LIVE PREVIEW */}
+            <div style={{ border: '2px dashed #cbd5e1', borderRadius: '8px', padding: '12px', backgroundColor: '#f8fafc' }}>
+              <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#334155', display: 'block', marginBottom: '8px' }}>
+                📸 Upload Dish Photo (Live Preview)
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageFileChange}
+                style={{ padding: '4px', width: '100%', fontSize: '13px' }}
+              />
+              {imagePreview && (
+                <div style={{ marginTop: '10px' }}>
+                  <img
+                    src={imagePreview}
+                    alt="Dish Preview"
+                    style={{
+                      width: '100%',
+                      maxHeight: '160px',
+                      objectFit: 'cover',
+                      borderRadius: '6px',
+                      border: '2px solid #0f766e',
+                      boxShadow: '0 2px 8px rgba(15,118,110,0.15)'
+                    }}
+                  />
+                  <p style={{ fontSize: '11px', color: '#0f766e', marginTop: '4px', textAlign: 'center' }}>
+                    ✅ Live preview — image ready to publish
+                  </p>
+                </div>
+              )}
+            </div>
+
             <textarea placeholder="Description" value={dishDescription} onChange={(e) => setDishDescription(e.target.value)} style={{ padding: '8px', height: '40px', resize: 'none' }} />
             
             <div>
@@ -39,8 +80,11 @@ export default function OwnerView({
         <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
           <h3 style={{ marginTop: '0' }}>Active Live Catalog Summary</h3>
           {myRestaurant.menu && myRestaurant.menu.map(item => (
-            <div key={item.id} style={{ padding: '10px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between' }}>
-              <span>{item.name} <strong>({item.isPermanent ? 'Permanent' : 'Daily'})</strong></span>
+            <div key={item.id} style={{ padding: '10px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {item.imageUrl && (
+                <img src={item.imageUrl} alt={item.name} style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px', marginRight: '10px' }} />
+              )}
+              <span style={{ flex: 1 }}>{item.name} <strong>({item.isPermanent ? 'Permanent' : 'Daily'})</strong></span>
               <span>{item.basePrice} {myRestaurant.currency || 'CFA'}</span>
             </div>
           ))}
