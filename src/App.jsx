@@ -4,6 +4,7 @@ import RegisterForm from './components/RegisterForm'
 import LoginForm from './components/LoginForm'
 import CustomerView from './components/CustomerView'
 import OwnerView from './components/OwnerView'
+import OwnerDashboard from './components/OwnerDashboard.jsx';
 
 function App() {
   // Navigation & Authentication States
@@ -19,7 +20,7 @@ function App() {
   const [regPassword, setRegPassword] = useState('');
   const [regShopName, setRegShopName] = useState('');
   const [regCountry, setRegCountry] = useState('Cameroon');
-  const [regTown, setRegTown] = useState('Yaounde');
+  const [regTown, setRegTown] = useState('Yaunde');
   const [regQuarter, setRegQuarter] = useState('Bastos');
   const [regCurrency, setRegCurrency] = useState('CFA'); // Currency hook state
 
@@ -81,28 +82,32 @@ function App() {
   // 🚀 SEAMLESS ONBOARDING PIPELINE: NO POPUPS, IMMEDIATE DASHBOARD ROUTING
   const handleOwnerRegister = async (e) => {
     e.preventDefault();
-    const response = await fetch('http://localhost:3000/api/vendors/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        email: regEmail, 
-        password: regPassword, 
-        shopName: regShopName, 
-        currency: regCurrency,
-        country: regCountry,
-        town: regTown,
-        quarter: regQuarter
-      }),
-    });
-    const data = await response.json();
-    if (data.success) {
-      setUserRole('owner');
-      setOwnerId(data.ownerId);
-      setMyRestaurant(data.restaurant);
-      setAuthView('none'); // Instantly dismisses form layer window without alerts
-      reloadDataPipeline();
-    } else {
-      alert(data.message);
+    try {
+      const response = await fetch('http://localhost:3000/api/vendors/register-owner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: regEmail, 
+          password: regPassword, 
+          restaurantName: regShopName, 
+          currency: regCurrency,
+          country: regCountry,
+          city: regTown,               
+          location: regQuarter         
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setUserRole('owner');
+        setOwnerId(data.ownerId);
+        setMyRestaurant(data.restaurant);
+        setAuthView('none');
+        reloadDataPipeline();
+      } else {
+        alert(data.message || "Registration failed");
+      }
+    } catch (err) {
+      console.error("Connection Error:", err.message);
     }
   };
 
@@ -222,7 +227,25 @@ function App() {
         {userRole === 'guest' ? (
           <CustomerView searchCountry={searchCountry} setSearchCountry={setSearchCountry} searchCity={searchCity} setSearchCity={setSearchCity} searchQuarter={searchQuarter} setSearchQuarter={setSearchQuarter} filteredShops={filteredShops} selectedVendor={selectedVendor} setSelectedVendor={setSelectedVendor} setSelectedItem={setSelectedItem} selectedItem={selectedItem} typedAddress={typedAddress} setTypedAddress={setTypedAddress} ingredientModifiers={ingredientModifiers} setIngredientModifiers={setIngredientModifiers} handlePlaceCustomerOrder={handlePlaceCustomerOrder} globalOrders={globalOrders} healthProfile={healthProfile} setHealthProfile={setHealthProfile} />
         ) : (
-          myRestaurant && <OwnerView handleAddCustomDish={handleAddCustomDish} dishName={dishName} setDishName={setDishName} dishPrice={dishPrice} setDishPrice={setDishPrice} dishImage={dishImage} setDishImage={setDishImage} dishDescription={dishDescription} setDishDescription={setDishDescription} dishTypeOption={dishTypeOption} setDishTypeOption={setDishTypeOption} handleWipeDailyMenu={handleWipeDailyMenu} myRestaurant={myRestaurant} globalOrders={globalOrders} handleUpdateOrderStatus={handleUpdateOrderStatus} />
+          myRestaurant && <OwnerDashboard 
+  handleAddCustomDish={handleAddCustomDish} 
+  dishName={dishName} 
+  setDishName={setDishName} 
+  dishPrice={dishPrice} 
+  setDishPrice={setDishPrice} 
+  dishImage={dishImage} 
+  setDishImage={setDishImage} 
+  dishDescription={dishDescription} 
+  setDishDescription={setDishDescription} 
+  dishTypeOption={dishTypeOption} 
+  setDishTypeOption={setDishTypeOption} 
+  handleWipeDailyMenu={handleWipeDailyMenu} 
+  myRestaurant={myRestaurant} 
+  globalOrders={globalOrders} 
+  handleUpdateOrderStatus={handleUpdateOrderStatus}
+  formIngredients={formIngredients}       // 👈 Add this line
+  setFormIngredients={setFormIngredients} // 👈 Add this line
+/>
         )}
       </main>
     </div>
