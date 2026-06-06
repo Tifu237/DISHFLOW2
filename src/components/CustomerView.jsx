@@ -1,152 +1,263 @@
 import React from 'react';
 
 export default function CustomerView({
-  searchCountry, setSearchCountry, searchCity, setSearchCity, searchQuarter, setSearchQuarter,
-  filteredShops, selectedVendor, setSelectedVendor, setSelectedItem, selectedItem,
-  typedAddress, setTypedAddress, ingredientModifiers, setIngredientModifiers,
-  handlePlaceCustomerOrder, globalOrders, healthProfile, setHealthProfile
+  searchCountry, setSearchCountry,
+  searchCity, setSearchCity,
+  searchQuarter, setSearchQuarter,
+  filteredShops,
+  selectedVendor, setSelectedVendor,
+  selectedItem, setSelectedItem,
+  typedAddress, setTypedAddress,
+  ingredientModifiers, setIngredientModifiers,
+  handlePlaceCustomerOrder,
+  globalOrders,
+  healthProfile, setHealthProfile,
+  customerEmail // 🚀 NEW PROP: Receives the logged-in user's identity string
 }) {
+
+  // Quick helper to handle the dynamic item ingredient customization logic
+  const handleModifierChange = (ingredientName, value) => {
+    setIngredientModifiers({
+      ...ingredientModifiers,
+      [ingredientName]: value
+    });
+  };
+
+  // 🛡️ SECURITY PATTERN: Filter the system stream down to only this user's records
+  const userSpecificOrders = globalOrders.filter(order => {
+    // If you track by a unique customer account key on your backend order documents:
+    if (order.customerEmail && customerEmail) {
+      return order.customerEmail === customerEmail;
+    }
+    // Fallback security matching against local input configurations for safety:
+    return typedAddress && order.deliveryAddress === typedAddress;
+  });
+
   return (
-    <div>
-      <div style={{ display: 'flex', gap: '15px', backgroundColor: '#cbd5e1', padding: '12px 20px', borderRadius: '6px', marginBottom: '20px', textAlign: 'left', alignItems: 'center' }}>
-        <span style={{ fontWeight: 'bold', fontSize: '12px', color: '#0f172a' }}>📍 TARGET REGION ROUTER:</span>
-        <input type="text" placeholder="Filter Country" value={searchCountry} onChange={(e) => setSearchCountry(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #94a3b8' }} />
-        <input type="text" placeholder="Filter City" value={searchCity} onChange={(e) => setSearchCity(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #94a3b8' }} />
-        <input type="text" placeholder="Filter Quarter" value={searchQuarter} onChange={(e) => setSearchQuarter(e.target.value)} style={{ padding: '6px', borderRadius: '4px', border: '1px solid #94a3b8' }} />
+    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '30px', fontFamily: '"Inter", sans-serif' }}>
+      
+      {/* LEFT COLUMN: KITCHEN SEARCH & MENU CATALOGUE */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+        
+        {/* 🔍 REGIONAL KITCHEN FILTERS HEADER */}
+        <div style={{ backgroundColor: '#ffffff', padding: '24px', borderRadius: '12px', border: '1px solid #e1d8c7', boxShadow: '0 10px 25px rgba(43,27,17,0.02)' }}>
+          <span style={{ textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '11px', fontWeight: '700', color: '#c25123', display: 'block', marginBottom: '8px' }}>Locate Certified Kitchens</span>
+          <h3 style={{ margin: '0 0 20px 0', fontSize: '22px', fontWeight: '800', color: '#2b1b11' }}>Regional Culinary Router</h3>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+            <input 
+              type="text" 
+              placeholder="🔍 Search Country (e.g. Cameroon)" 
+              value={searchCountry}
+              onChange={(e) => setSearchCountry(e.target.value)}
+              style={{ padding: '12px', borderRadius: '6px', border: '1px solid #ebdcc5', backgroundColor: '#faf6f0', color: '#2b1b11', fontSize: '14px', outline: 'none' }}
+            />
+            <input 
+              type="text" 
+              placeholder="📍 Search City (e.g. Yaoundé)" 
+              value={searchCity}
+              onChange={(e) => setSearchCity(e.target.value)}
+              style={{ padding: '12px', borderRadius: '6px', border: '1px solid #ebdcc5', backgroundColor: '#faf6f0', color: '#2b1b11', fontSize: '14px', outline: 'none' }}
+            />
+            <input 
+              type="text" 
+              placeholder="🏘️ Search Quarter (e.g. Bastos)" 
+              value={searchQuarter}
+              onChange={(e) => setSearchQuarter(e.target.value)}
+              style={{ padding: '12px', borderRadius: '6px', border: '1px solid #ebdcc5', backgroundColor: '#faf6f0', color: '#2b1b11', fontSize: '14px', outline: 'none' }}
+            />
+          </div>
+        </div>
+
+        {/* 🏪 AVAILABLE KITCHENS STREAM LIST */}
+        {!selectedVendor ? (
+          <div style={{ backgroundColor: '#ffffff', padding: '30px', borderRadius: '12px', border: '1px solid #e1d8c7', boxShadow: '0 10px 25px rgba(43,27,17,0.02)' }}>
+            <h4 style={{ margin: '0 0 15px 0', fontSize: '18px', fontWeight: '700', color: '#2b1b11' }}>Browse Registered Food Spots</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {filteredShops.length === 0 ? (
+                <p style={{ fontStyle: 'italic', color: '#a19388', fontSize: '14px' }}>No certified kitchens matching the routing criteria currently live.</p>
+              ) : (
+                filteredShops.map(shop => (
+                  <div key={shop.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', backgroundColor: '#faf6f0', border: '1px solid #ebdcc5', borderRadius: '8px' }}>
+                    <div>
+                      <h5 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '700', color: '#2b1b11' }}>{shop.restaurantName || shop.name}</h5>
+                      <span style={{ fontSize: '13px', color: '#6e5e53' }}>📍 Hub: {shop.location || shop.town}, {shop.city} ({shop.country})</span>
+                    </div>
+                    <button 
+                      onClick={() => setSelectedVendor(shop)}
+                      style={{ padding: '10px 20px', backgroundColor: '#c25123', color: '#ffffff', border: 'none', borderRadius: '6px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
+                    >
+                      View Menu Cards
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        ) : (
+          /* 🍽️ SELECTED KITCHEN INNER MENU DISPLAY CASE */
+          <div style={{ backgroundColor: '#ffffff', padding: '30px', borderRadius: '12px', border: '1px solid #e1d8c7', boxShadow: '0 10px 25px rgba(43,27,17,0.02)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #ebdcc5', paddingBottom: '15px' }}>
+              <div>
+                <button onClick={() => { setSelectedVendor(null); setSelectedItem(null); }} style={{ border: 'none', background: 'none', color: '#c25123', fontWeight: '700', fontSize: '13px', cursor: 'pointer', display: 'block', marginBottom: '4px', textDecoration: 'underline' }}>← Back to All Kitchens</button>
+                <h4 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: '#2b1b11' }}>{selectedVendor.restaurantName || selectedVendor.name}</h4>
+              </div>
+              <span style={{ fontSize: '13px', color: '#6e5e53', background: '#faf6f0', padding: '6px 12px', borderRadius: '4px', border: '1px solid #ebdcc5', fontWeight: '600' }}>Base Currency: {selectedVendor.currency}</span>
+            </div>
+
+            <h5 style={{ margin: '0 0 15px 0', fontSize: '15px', fontWeight: '700', color: '#6e5e53', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active Menu Selection</h5>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              {(!selectedVendor.menu || selectedVendor.menu.length === 0) ? (
+                <p style={{ fontStyle: 'italic', color: '#a19388', fontSize: '14px', gridColumn: 'span 2' }}>This restaurant hasn't uploaded dishes to their active menu deck yet.</p>
+              ) : (
+                selectedVendor.menu.map(item => (
+                  <div key={item.id} style={{ padding: '20px', backgroundColor: '#faf6f0', border: '1px solid #ebdcc5', borderRadius: '8px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    <div>
+                      {item.imageUrl && <img src={item.imageUrl} alt={item.name} style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '4px', marginBottom: '12px', border: '1px solid #ebdcc5' }} />}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '16px', fontWeight: '700', color: '#2b1b11' }}>{item.name}</span>
+                        <span style={{ fontSize: '15px', fontWeight: '700', color: '#c25123' }}>{item.basePrice} {selectedVendor.currency}</span>
+                      </div>
+                      <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: '#6e5e53', lineHeight: '1.5' }}>{item.description || 'No specific description provided.'}</p>
+                    </div>
+                    <button 
+                      onClick={() => setSelectedItem(item)}
+                      style={{ width: '100%', padding: '10px', backgroundColor: '#2b1b11', color: '#f5f0e6', border: 'none', borderRadius: '6px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
+                    >
+                      Calibrate & Order
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1.6fr', gap: '20px' }}>
-        <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-          {!selectedVendor ? (
-            <div style={{ textAlign: 'left' }}>
-              <h3 style={{ marginTop: '0' }}>Browse Kitchen Market</h3>
-              {filteredShops.map(shop => (
-                <div key={shop.id} style={{ padding: '15px', border: '1px solid #cbd5e1', borderRadius: '6px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <h4 style={{ margin: '0 0 5px 0' }}>{shop.name}</h4>
-                    <small style={{ color: '#64748b' }}>Location Hub: {shop.location}, {shop.city} ({shop.country})</small>
-                  </div>
-                  <button onClick={() => setSelectedVendor(shop)} style={{ backgroundColor: '#0f766e', color: 'white', padding: '8px 12px', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer' }}>Open Menu</button>
-                </div>
-              ))}
+      {/* RIGHT COLUMN: CLINICAL DIETARY PROFILE & BILL DECK */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+        
+        {/* 🏥 CLINICAL DIETARY PROFILER */}
+        <div style={{ backgroundColor: '#ffffff', padding: '25px', borderRadius: '12px', border: '1px solid #e1d8c7', boxShadow: '0 10px 25px rgba(43,27,17,0.02)' }}>
+          <h4 style={{ margin: '0 0 15px 0', fontSize: '16px', fontWeight: '700', color: '#2b1b11' }}>🩺 Patient Health Framework</h4>
+          <p style={{ margin: '0 0 16px 0', fontSize: '13px', color: '#6e5e53', lineHeight: '1.4' }}>Select a clinical criteria block to automatically tag or filter matching allergen warnings.</p>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {[
+              { id: 'none', label: 'Standard Dining Profile (No Filters)', color: '#6e5e53' },
+              { id: 'hypertension', label: 'Hypertension Framework (Low Sodium)', color: '#c25123' },
+              { id: 'ulcer', label: 'Gastric Ulcer Protection (Anti-Spicy)', color: '#b45309' },
+              { id: 'diabetes', label: 'Diabetic Compliance (Sugar Tracking)', color: '#4a6b42' }
+            ].map(prof => (
+              <button
+                key={prof.id}
+                onClick={() => setHealthProfile(prof.id)}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '12px 16px',
+                  borderRadius: '6px',
+                  border: healthProfile === prof.id ? `2px solid ${prof.color}` : '1px solid #ebdcc5',
+                  backgroundColor: healthProfile === prof.id ? '#faf6f0' : '#ffffff',
+                  color: '#2b1b11',
+                  fontWeight: healthProfile === prof.id ? '700' : '500',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {healthProfile === prof.id ? '✓ ' : ''}{prof.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 🛒 ACTIVE RECIPE CUSTOMIZATION MODULE */}
+        <div style={{ backgroundColor: '#ffffff', padding: '25px', borderRadius: '12px', border: '1px solid #e1d8c7', boxShadow: '0 10px 25px rgba(43,27,17,0.02)' }}>
+          <h4 style={{ margin: '0 0 15px 0', fontSize: '16px', fontWeight: '700', color: '#2b1b11' }}>🛒 Custom Ingredient Matrix</h4>
+          
+          {!selectedItem ? (
+            <div style={{ textAlign: 'center', padding: '30px', backgroundColor: '#faf6f0', borderRadius: '8px', border: '1px dashed #ebdcc5', color: '#6e5e53', fontSize: '13px', fontStyle: 'italic' }}>
+              Select an active menu item card from a registered kitchen to configure dynamic recipe ingredients.
             </div>
           ) : (
-            <div style={{ textAlign: 'left' }}>
-              <button onClick={() => { setSelectedVendor(null); setSelectedItem(null); }} style={{ color: '#0f766e', background: 'none', border: 'none', fontWeight: 'bold', cursor: 'pointer', marginBottom: '10px' }}>← Back to Restaurant Hubs</button>
-              <h3>{selectedVendor.name} Catalog</h3>
-              {selectedVendor.menu.map(item => (
-                <div key={item.id} onClick={() => setSelectedItem(item)} style={{ padding: '15px', border: selectedItem?.id === item.id ? '2px solid #0f766e' : '1px solid #e2e8f0', borderRadius: '6px', marginBottom: '10px', cursor: 'pointer', backgroundColor: selectedItem?.id === item.id ? '#f0fdf4' : 'white' }}>
-                  {item.imageUrl && <img src={item.imageUrl} alt={item.name} style={{ width: '100%', maxHeight: '110px', objectFit: 'cover', borderRadius: '4px', marginBottom: '8px' }} />}
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <h4 style={{ margin: '0' }}>{item.name} <small style={{ color: '#0284c7' }}>({item.isPermanent ? 'Permanent' : 'Daily Special'})</small></h4>
-                    <strong>{item.basePrice} {selectedVendor.currency || 'CFA'}</strong>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ backgroundColor: '#faf6f0', padding: '12px', borderRadius: '6px', border: '1px solid #ebdcc5' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#6e5e53', display: 'block', textTransform: 'uppercase' }}>Target Recipe</span>
+                <strong style={{ fontSize: '15px', color: '#2b1b11' }}>{selectedItem.name}</strong>
+              </div>
+
+              {/* Dynamic Ingredient Looper */}
+              <div>
+                <span style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#6e5e53', marginBottom: '8px' }}>Calibrate Components:</span>
+                {(!selectedItem.ingredients || selectedItem.ingredients.length === 0) ? (
+                  <span style={{ fontSize: '13px', color: '#a19388', fontStyle: 'italic' }}>Standard default recipe structure (no adjustments needed).</span>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {selectedItem.ingredients.map((ing, idx) => (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', backgroundColor: '#faf6f0', borderRadius: '6px', border: '1px solid #ebdcc5' }}>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: '700', color: '#2b1b11' }}>{ing.name}</div>
+                          {ing.healthWarning && <span style={{ fontSize: '11px', color: '#c25123', fontWeight: '500' }}>⚠️ {ing.healthWarning}</span>}
+                        </div>
+                        <select
+                          value={ingredientModifiers[ing.name] || 'Normal'}
+                          onChange={(e) => handleModifierChange(ing.name, e.target.value)}
+                          style={{ padding: '6px', borderRadius: '4px', border: '1px solid #ebdcc5', fontSize: '12px', fontWeight: '600', backgroundColor: '#ffffff', color: '#2b1b11' }}
+                        >
+                          <option value="Normal">Include (Normal)</option>
+                          <option value="None">Exclude (-{ing.costValue} CFA)</option>
+                        </select>
+                      </div>
+                    ))}
                   </div>
-                  <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#64748b' }}>{item.description}</p>
-                </div>
-              ))}
+                )}
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: '#6e5e53', marginBottom: '6px' }}>Delivery Destination Address</label>
+                <input 
+                  type="text" 
+                  placeholder="e.g. Street 402, Bastos, Yaoundé" 
+                  value={typedAddress}
+                  onChange={(e) => setTypedAddress(e.target.value)}
+                  style={{ width: '100%', boxSizing: 'border-box', padding: '12px', borderRadius: '6px', border: '1px solid #ebdcc5', backgroundColor: '#faf6f0', color: '#2b1b11', fontSize: '13px', outline: 'none' }}
+                />
+              </div>
+
+              <button 
+                onClick={handlePlaceCustomerOrder}
+                style={{ width: '100%', padding: '14px', backgroundColor: '#4a6b42', color: '#ffffff', border: 'none', borderRadius: '6px', fontWeight: '700', fontSize: '14px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(74,107,66,0.15)' }}
+              >
+                Dispatch Health Monitored Order Ticket
+              </button>
             </div>
           )}
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'left' }}>
-            <h3 style={{ marginTop: '0', color: '#0f766e' }}>Dietary Customizer Deck</h3>
-            {selectedItem ? (
-              <div>
-                <h4>Modify Recipe: {selectedItem.name}</h4>
-                <input type="text" placeholder="Enter precise drop-off delivery address" value={typedAddress} onChange={(e) => setTypedAddress(e.target.value)} style={{ width: '95%', padding: '8px', marginBottom: '15px' }} />
-                
-                <div style={{ backgroundColor: '#f1f5f9', border: '1px solid #cbd5e1', padding: '12px', borderRadius: '6px', marginBottom: '15px' }}>
-                  <label style={{ display: 'block', fontWeight: 'bold', fontSize: '12px', marginBottom: '6px', color: '#334155' }}>🩺 AUTO-ADJUST HEALTH PROFILE PRESETS:</label>
-                  <select 
-                    value={healthProfile} 
-                    onChange={(e) => {
-                      const pId = e.target.value;
-                      setHealthProfile(pId);
-                      
-                      // Auto-adjust ingredients map
-                      const initialMap = {};
-                      selectedItem.ingredients.forEach(ing => {
-                        initialMap[ing.name] = 'Normal';
-                      });
-
-                      if (pId === 'hypertension') {
-                        selectedItem.ingredients.forEach(ing => {
-                          if (ing.name.toLowerCase().includes('salt') || ing.name.toLowerCase().includes('sodium')) {
-                            initialMap[ing.name] = 'Low';
-                          }
-                        });
-                      } else if (pId === 'ulcer') {
-                        selectedItem.ingredients.forEach(ing => {
-                          if (ing.name.toLowerCase().includes('pepper') || ing.name.toLowerCase().includes('chili') || ing.name.toLowerCase().includes('spicy')) {
-                            initialMap[ing.name] = 'None';
-                          }
-                        });
-                      } else if (pId === 'diabetes') {
-                        selectedItem.ingredients.forEach(ing => {
-                          if (ing.name.toLowerCase().includes('sugar') || ing.name.toLowerCase().includes('plantain')) {
-                            initialMap[ing.name] = 'Low';
-                          }
-                        });
-                      } else if (pId === 'shellfish') {
-                        selectedItem.ingredients.forEach(ing => {
-                          if (ing.name.toLowerCase().includes('prawn') || ing.name.toLowerCase().includes('shrimp') || ing.name.toLowerCase().includes('shellfish')) {
-                            initialMap[ing.name] = 'None';
-                          }
-                        });
-                      }
-
-                      setIngredientModifiers(initialMap);
-                    }}
-                    style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #94a3b8', fontSize: '13px', backgroundColor: 'white', cursor: 'pointer' }}
-                  >
-                    <option value="none">Standard Diet / No Medical Alert</option>
-                    <option value="hypertension">Hypertension (Auto-sets Salts to Low)</option>
-                    <option value="ulcer">Gastric Ulcer (Auto-removes Hot Peppers)</option>
-                    <option value="diabetes">Diabetes (Auto-reduces Sugars & Plantains)</option>
-                    <option value="shellfish">Shellfish Allergy (Auto-removes Shellfish/Prawns)</option>
-                  </select>
-                </div>
-
-                {healthProfile !== 'none' && (
-                  <div style={{ padding: '10px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '4px', marginBottom: '15px', fontSize: '12px', color: '#065f46', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    🛡️ <strong>Health Guard:</strong> Recipe optimized automatically for {healthProfile === 'hypertension' ? 'Hypertension (Low Sodium)' : healthProfile === 'ulcer' ? 'Gastric Ulcer (Gastric-safe)' : healthProfile === 'diabetes' ? 'Diabetes (Low Glycemic/Carb)' : 'Shellfish Allergy (Allergen-free)'}!
+        {/* 📋 LIVE CLIENT TRACKING TICKET FEED */}
+        <div style={{ backgroundColor: '#ffffff', padding: '25px', borderRadius: '12px', border: '1px solid #e1d8c7', boxShadow: '0 10px 25px rgba(43,27,17,0.02)' }}>
+          <h4 style={{ margin: '0 0 15px 0', fontSize: '16px', fontWeight: '700', color: '#2b1b11' }}>📋 Live Order Processing Monitor</h4>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {userSpecificOrders.length === 0 ? (
+              <p style={{ margin: 0, fontStyle: 'italic', color: '#a19388', fontSize: '13px', textAlign: 'center', padding: '20px' }}>No active outgoing dispatch tickets listed for your profile session.</p>
+            ) : (
+              userSpecificOrders.slice(-3).reverse().map(order => (
+                <div key={order.orderId} style={{ padding: '12px', backgroundColor: '#faf6f0', border: '1px solid #ebdcc5', borderRadius: '6px', fontSize: '13px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '700', marginBottom: '4px' }}>
+                    <span style={{ color: '#2b1b11' }}>{order.itemName}</span>
+                    <span style={{ color: order.status === 'Completed' ? '#4a6b42' : '#c25123' }}>[{order.status}]</span>
                   </div>
-                )}
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {selectedItem.ingredients.map(ing => {
-                    const status = ingredientModifiers[ing.name] || 'Normal';
-                    return (
-                      <div key={ing.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
-                        <span><strong>{ing.name}</strong> {status === 'None' && `(-${ing.costValue})`}</span>
-                        <div style={{ display: 'flex', gap: '2px' }}>
-                          {['None', 'Low', 'Normal'].map(m => (
-                            <button key={m} onClick={() => setIngredientModifiers(p => ({ ...p, [ing.name]: m }))} style={{ fontSize: '11px', backgroundColor: status === m ? '#1e293b' : 'white', color: status === m ? 'white' : 'black' }}>{m}</button>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
+                  <div style={{ color: '#6e5e53', fontSize: '12px', lineHeight: '1.4' }}>
+                    <div>📋 Calibration Profile: {order.modifications || 'Standard Preparation'}</div>
+                    <div>📍 Target Location: {order.deliveryAddress}</div>
+                  </div>
                 </div>
-                <button onClick={handlePlaceCustomerOrder} style={{ width: '100%', backgroundColor: '#0f766e', color: 'white', border: 'none', padding: '12px', marginTop: '15px', fontWeight: 'bold', cursor: 'pointer' }}>Submit Safe Recipe Order</button>
-              </div>
-            ) : <p style={{ color: '#64748b', fontSize: '13px' }}>Select an open menu dish item to apply healthcare modification metrics.</p>}
-          </div>
-
-          <div style={{ backgroundColor: 'white', padding: '20px', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'left' }}>
-            <h3>Your Live Order Pipeline Monitor</h3>
-            {globalOrders.length === 0 ? <p style={{ fontSize: '12px', color: '#64748b' }}>No active processing orders found in network.</p> : globalOrders.map(order => (
-              <div key={order.orderId} style={{ padding: '10px', borderBottom: '1px dashed #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <strong>{order.orderId} - {order.itemName}</strong>
-                  <div style={{ fontSize: '11px', color: '#475569' }}>Adjustments: {order.modifications || 'None'}</div>
-                </div>
-                <span style={{ backgroundColor: order.status === 'Delivered' ? '#dcfce7' : order.status === 'Cancelled' ? '#fee2e2' : '#fef9c3', color: 'black', padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}>{order.status}</span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
+
       </div>
     </div>
   );
